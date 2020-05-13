@@ -18,6 +18,12 @@
 
 package org.apache.hudi.hadoop.realtime;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.hadoop.fs.Path;
 import org.apache.hudi.common.model.HoodieAvroPayload;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
 import org.apache.hudi.common.table.log.LogReaderUtils;
@@ -36,11 +42,9 @@ import org.apache.parquet.avro.AvroSchemaConverter;
 import org.apache.parquet.schema.MessageType;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
+
+import static org.apache.hudi.hadoop.utils.HoodieRealtimeRecordReaderUtils.readSchema;
 
 /**
  * Record Reader implementation to merge fresh avro data with base parquet data, to support real time queries.
@@ -48,7 +52,7 @@ import java.util.stream.Collectors;
 public abstract class AbstractRealtimeRecordReader {
   private static final Logger LOG = LogManager.getLogger(AbstractRealtimeRecordReader.class);
 
-  protected final HoodieRealtimeFileSplit split;
+  private final String basePath;
   protected final JobConf jobConf;
   private final MessageType baseFileSchema;
   protected final boolean usesCustomPayload;
@@ -58,7 +62,7 @@ public abstract class AbstractRealtimeRecordReader {
   private Schema hiveSchema;
 
   public AbstractRealtimeRecordReader(HoodieRealtimeFileSplit split, JobConf job) {
-    this.split = split;
+    this.basePath = split.getBasePath();
     this.jobConf = job;
     LOG.info("cfg ==> " + job.get(ColumnProjectionUtils.READ_COLUMN_NAMES_CONF_STR));
     LOG.info("columnIds ==> " + job.get(ColumnProjectionUtils.READ_COLUMN_IDS_CONF_STR));
@@ -66,15 +70,35 @@ public abstract class AbstractRealtimeRecordReader {
     try {
       this.usesCustomPayload = usesCustomPayload();
       LOG.info("usesCustomPayload ==> " + this.usesCustomPayload);
-      baseFileSchema = HoodieRealtimeRecordReaderUtils.readSchema(jobConf, split.getPath());
-      init();
+      baseFileSchema = readSchema(jobConf, split.getPath());
+      String logMessage = "About to read compacted logs " + split.getDeltaLogPaths() + " for base split "
+          + split.getPath() + ", projecting cols %s";
+      init(split.getDeltaLogPaths(), logMessage);
     } catch (IOException e) {
-      throw new HoodieIOException("Could not create HoodieRealtimeRecordReader on path " + this.split.getPath(), e);
+      throw new HoodieIOException("Could not create HoodieRealtimeRecordReader on path " + split.getPath(), e);
+    }
+  }
+
+  public AbstractRealtimeRecordReader(HoodieMORIncrementalFileSplit split, JobConf job) {
+    this.basePath = split.getBasePath();
+    this.jobConf = job;
+    LOG.info("cfg ==> " + job.get(ColumnProjectionUtils.READ_COLUMN_NAMES_CONF_STR));
+    LOG.info("columnIds ==> " + job.get(ColumnProjectionUtils.READ_COLUMN_IDS_CONF_STR));
+    LOG.info("partitioningColumns ==> " + job.get(hive_metastoreConstants.META_TABLE_PARTITION_COLUMNS, ""));
+    try {
+      this.usesCustomPayload = usesCustomPayload();
+      LOG.info("usesCustomPayload ==> " + this.usesCustomPayload);
+      baseFileSchema = readSchema(jobConf, new Path(split.getLatestBaseFilePath()));
+      String logMessage = "About to read compacted logs for fileGroupId: "
+          + split.getFileGroupId().toString() + ", projecting cols %s";
+      init(split.getLatestLogFilePaths(), logMessage);
+    } catch (IOException e) {
+      throw new HoodieIOException("Could not create HoodieMORIncrementalRecordReader on file group Id " + split.getFileGroupId().toString(), e);
     }
   }
 
   private boolean usesCustomPayload() {
-    HoodieTableMetaClient metaClient = new HoodieTableMetaClient(jobConf, split.getBasePath());
+    HoodieTableMetaClient metaClient = new HoodieTableMetaClient(jobConf, basePath);
     return !(metaClient.getTableConfig().getPayloadClass().contains(HoodieAvroPayload.class.getName())
         || metaClient.getTableConfig().getPayloadClass().contains("org.apache.hudi.OverwriteWithLatestAvroPayload"));
   }
@@ -84,9 +108,9 @@ public abstract class AbstractRealtimeRecordReader {
    * back to the schema from the latest parquet file. Finally, sets the partition column and projection fields into the
    * job conf.
    */
-  private void init() throws IOException {
+  private void init(List<String> deltaLogPaths, String logMessage) throws IOException {
     Schema schemaFromLogFile =
-        LogReaderUtils.readLatestSchemaFromLogFiles(split.getBasePath(), split.getDeltaLogPaths(), jobConf);
+        LogReaderUtils.readLatestSchemaFromLogFiles(basePath, deltaLogPaths, jobConf);
     if (schemaFromLogFile == null) {
       writerSchema = new AvroSchemaConverter().convert(baseFileSchema);
       LOG.debug("Writer Schema From Parquet => " + writerSchema.getFields());
@@ -109,8 +133,7 @@ public abstract class AbstractRealtimeRecordReader {
     // to null out fields not present before
 
     readerSchema = HoodieRealtimeRecordReaderUtils.generateProjectionSchema(writerSchema, schemaFieldsMap, projectionFields);
-    LOG.info(String.format("About to read compacted logs %s for base split %s, projecting cols %s",
-        split.getDeltaLogPaths(), split.getPath(), projectionFields));
+    LOG.info(String.format(logMessage, projectionFields));
   }
 
   private Schema constructHiveOrderedSchema(Schema writerSchema, Map<String, Field> schemaFieldsMap) {
