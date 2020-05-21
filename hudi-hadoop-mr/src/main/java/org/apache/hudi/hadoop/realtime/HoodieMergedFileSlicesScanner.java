@@ -18,16 +18,6 @@
 
 package org.apache.hudi.hadoop.realtime;
 
-
-import static org.apache.hudi.hadoop.realtime.AbstractRealtimeRecordReader.COMPACTION_LAZY_BLOCK_READ_ENABLED_PROP;
-import static org.apache.hudi.hadoop.realtime.AbstractRealtimeRecordReader.DEFAULT_COMPACTION_LAZY_BLOCK_READ_ENABLED;
-import static org.apache.hudi.hadoop.realtime.AbstractRealtimeRecordReader.DEFAULT_MAX_DFS_STREAM_BUFFER_SIZE;
-import static org.apache.hudi.hadoop.realtime.AbstractRealtimeRecordReader.DEFAULT_SPILLABLE_MAP_BASE_PATH;
-import static org.apache.hudi.hadoop.realtime.AbstractRealtimeRecordReader.MAX_DFS_STREAM_BUFFER_SIZE_PROP;
-import static org.apache.hudi.hadoop.realtime.AbstractRealtimeRecordReader.SPILLABLE_MAP_BASE_PATH_PROP;
-import static org.apache.hudi.hadoop.realtime.AbstractRealtimeRecordReader.arrayWritableToString;
-import static org.apache.hudi.hadoop.realtime.AbstractRealtimeRecordReader.avroToArrayWritable;
-
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -57,6 +47,16 @@ import org.apache.hudi.common.util.Option;
 import org.apache.hudi.exception.HoodieIOException;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+
+import static org.apache.hudi.hadoop.config.HoodieRealtimeConfig.COMPACTION_LAZY_BLOCK_READ_ENABLED_PROP;
+import static org.apache.hudi.hadoop.config.HoodieRealtimeConfig.DEFAULT_COMPACTION_LAZY_BLOCK_READ_ENABLED;
+import static org.apache.hudi.hadoop.config.HoodieRealtimeConfig.DEFAULT_MAX_DFS_STREAM_BUFFER_SIZE;
+import static org.apache.hudi.hadoop.config.HoodieRealtimeConfig.DEFAULT_SPILLABLE_MAP_BASE_PATH;
+import static org.apache.hudi.hadoop.config.HoodieRealtimeConfig.MAX_DFS_STREAM_BUFFER_SIZE_PROP;
+import static org.apache.hudi.hadoop.config.HoodieRealtimeConfig.SPILLABLE_MAP_BASE_PATH_PROP;
+import static org.apache.hudi.hadoop.utils.HoodieInputFormatUtils.HOODIE_RECORD_KEY_COL_POS;
+import static org.apache.hudi.hadoop.utils.HoodieRealtimeRecordReaderUtils.arrayWritableToString;
+import static org.apache.hudi.hadoop.utils.HoodieRealtimeRecordReaderUtils.avroToArrayWritable;
 
 /**
  * Scans through all files in a file slice. Constructs a map of records from Parquet file if present. Constructs merged
@@ -191,7 +191,7 @@ public class HoodieMergedFileSlicesScanner {
       ArrayWritable value = recordReader.createValue();
       boolean hasNext = recordReader.next(key, value);
       while (hasNext) {
-        String hoodieRecordKey = value.get()[HoodieParquetRealtimeInputFormat.HOODIE_RECORD_KEY_COL_POS].toString();
+        String hoodieRecordKey = value.get()[HOODIE_RECORD_KEY_COL_POS].toString();
         result.put(hoodieRecordKey, value);
         key = recordReader.createKey();
         value = recordReader.createValue();

@@ -116,7 +116,7 @@ public class HoodieParquetRealtimeInputFormat extends HoodieParquetInputFormat i
       List<HoodieInstant> commitsToCheck = timeline.findInstantsAfter(lastIncrementalTs, maxCommits)
           .getInstants().collect(Collectors.toList());
 
-      Map<Path, List<FileStatus>> partitionToFileStatusesMap = listStatusForAffectedPartitions(basePath, commitsToCheck, timeline);
+      Map<String, List<FileStatus>> partitionToFileStatusesMap = listStatusForAffectedPartitions(basePath, commitsToCheck, timeline);
 
       List<FileStatus> fileStatuses = new ArrayList<>();
       for (List<FileStatus> statuses: partitionToFileStatusesMap.values()) {
@@ -132,7 +132,7 @@ public class HoodieParquetRealtimeInputFormat extends HoodieParquetInputFormat i
       // Iterate partitions to create splits
       partitionToFileStatusesMap.keySet().forEach(path -> {
         // create an Incremental Split for each file group.
-        fsView.getAllFileGroups(path.toString())
+        fsView.getAllFileGroups(path)
             .forEach(fileGroup -> splits.add(new HoodieMORIncrementalFileSplit(fileGroup, basePath.toString(), commitsList)));
       });
     }
@@ -140,18 +140,17 @@ public class HoodieParquetRealtimeInputFormat extends HoodieParquetInputFormat i
     return splits.toArray(new InputSplit[0]);
   }
 
-  private Map<Path, List<FileStatus>> listStatusForAffectedPartitions(
+  private Map<String, List<FileStatus>> listStatusForAffectedPartitions(
       Path basePath, List<HoodieInstant> commitsToCheck, HoodieTimeline timeline) throws IOException {
     //Extract files touched by these commits.
     // TODO SUDHA This might need to be done in parallel like listStatus parallelism ?
-    HashMap<Path, List<FileStatus>> partitionToFileStatusesMap = new HashMap<>();
+    HashMap<String, List<FileStatus>> partitionToFileStatusesMap = new HashMap<>();
     for (HoodieInstant commit: commitsToCheck) {
       HoodieCommitMetadata commitMetadata = HoodieCommitMetadata.fromBytes(timeline.getInstantDetails(commit).get(),
           HoodieCommitMetadata.class);
       for (Map.Entry<String, List<HoodieWriteStat>> entry: commitMetadata.getPartitionToWriteStats().entrySet()) {
-        Path partitionPath = FSUtils.getPartitionPath(basePath, entry.toString());
-        if (!partitionToFileStatusesMap.containsKey(partitionPath)) {
-          partitionToFileStatusesMap.put(partitionPath, new ArrayList<>());
+        if (!partitionToFileStatusesMap.containsKey(entry.getKey())) {
+          partitionToFileStatusesMap.put(entry.getKey(), new ArrayList<>());
         }
         for (HoodieWriteStat stat : entry.getValue()) {
           String relativeFilePath = stat.getPath();
@@ -160,7 +159,7 @@ public class HoodieParquetRealtimeInputFormat extends HoodieParquetInputFormat i
             //TODO SUDHA should the length of file be totalWriteBytes or fileSizeInBytes?
             FileStatus fs = new FileStatus(stat.getTotalWriteBytes(), false, 0, 0,
                 0, fullPath);
-            partitionToFileStatusesMap.get(partitionPath).add(fs);
+            partitionToFileStatusesMap.get(entry.getKey()).add(fs);
           }
         }
       }

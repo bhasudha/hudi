@@ -20,12 +20,14 @@ package org.apache.hudi.hadoop.realtime;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Map;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hudi.exception.HoodieIOException;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
@@ -34,11 +36,19 @@ import org.apache.log4j.Logger;
  */
 public class HoodieMORIncrementalRecordReader extends AbstractRealtimeRecordReader implements RecordReader<NullWritable, ArrayWritable> {
   private static final Logger LOG = LogManager.getLogger(HoodieMORIncrementalRecordReader.class);
+  private final Map<String, ArrayWritable> records;
   private final Iterator<ArrayWritable> iterator;
 
   public HoodieMORIncrementalRecordReader(HoodieMORIncrementalFileSplit split, JobConf job, Reporter reporter) {
     super(split, job);
-    this.iterator = new HoodieMergedFileSlicesScanner(split, job, reporter).getRecords().values().iterator();
+    HoodieMergedFileSlicesScanner fileSlicesScanner = new HoodieMergedFileSlicesScanner(split, job, reporter);
+    try {
+      fileSlicesScanner.scan(this);
+      this.records = fileSlicesScanner.getRecords();
+      this.iterator = records.values().iterator();
+    } catch (IOException e) {
+      throw new HoodieIOException("IOException when reading log file ");
+    }
   }
 
   @Override

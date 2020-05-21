@@ -480,4 +480,21 @@ public class HoodieTestUtils {
     }
     return writeStatList;
   }
+
+  public static HoodieWriteStat generateFakeHoodieWriteStat(java.nio.file.Path basePath, HoodieLogFile logFile) {
+    HoodieWriteStat writeStat = new HoodieWriteStat();
+    writeStat.setFileId(UUID.randomUUID().toString());
+    writeStat.setNumDeletes(0);
+    writeStat.setNumUpdateWrites(100);
+    writeStat.setNumWrites(100);
+    writeStat.setPath(logFile.getPath().toString().replaceFirst(basePath.toString() + "/", ""));
+    writeStat.setPartitionPath("/some/fake/partition/path");
+    writeStat.setTotalLogFilesCompacted(100L);
+    RuntimeStats runtimeStats = new RuntimeStats();
+    runtimeStats.setTotalScanTime(100);
+    runtimeStats.setTotalCreateTime(100);
+    runtimeStats.setTotalUpsertTime(100);
+    writeStat.setRuntimeStats(runtimeStats);
+    return writeStat;
+  }
 }

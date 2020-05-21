@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hudi.common.model.HoodieAvroPayload;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
 import org.apache.hudi.common.table.log.LogReaderUtils;
+import org.apache.hudi.common.util.Option;
 import org.apache.hudi.exception.HoodieIOException;
 import org.apache.hudi.hadoop.config.HoodieRealtimeConfig;
 import org.apache.hudi.hadoop.utils.HoodieRealtimeRecordReaderUtils;
@@ -54,7 +55,7 @@ public abstract class AbstractRealtimeRecordReader {
 
   private final String basePath;
   protected final JobConf jobConf;
-  private final MessageType baseFileSchema;
+  private final Option<MessageType> baseFileSchema;
   protected final boolean usesCustomPayload;
   // Schema handles
   private Schema readerSchema;
@@ -70,7 +71,7 @@ public abstract class AbstractRealtimeRecordReader {
     try {
       this.usesCustomPayload = usesCustomPayload();
       LOG.info("usesCustomPayload ==> " + this.usesCustomPayload);
-      baseFileSchema = readSchema(jobConf, split.getPath());
+      baseFileSchema = Option.of(readSchema(jobConf, split.getPath()));
       String logMessage = "About to read compacted logs " + split.getDeltaLogPaths() + " for base split "
           + split.getPath() + ", projecting cols %s";
       init(split.getDeltaLogPaths(), logMessage);
@@ -88,7 +89,7 @@ public abstract class AbstractRealtimeRecordReader {
     try {
       this.usesCustomPayload = usesCustomPayload();
       LOG.info("usesCustomPayload ==> " + this.usesCustomPayload);
-      baseFileSchema = readSchema(jobConf, new Path(split.getLatestBaseFilePath()));
+      baseFileSchema = split.getLatestBaseFilePath() == null ? Option.empty() : Option.of(readSchema(jobConf, new Path(split.getLatestBaseFilePath())));
       String logMessage = "About to read compacted logs for fileGroupId: "
           + split.getFileGroupId().toString() + ", projecting cols %s";
       init(split.getLatestLogFilePaths(), logMessage);
@@ -111,8 +112,8 @@ public abstract class AbstractRealtimeRecordReader {
   private void init(List<String> deltaLogPaths, String logMessage) throws IOException {
     Schema schemaFromLogFile =
         LogReaderUtils.readLatestSchemaFromLogFiles(basePath, deltaLogPaths, jobConf);
-    if (schemaFromLogFile == null) {
-      writerSchema = new AvroSchemaConverter().convert(baseFileSchema);
+    if (schemaFromLogFile == null && baseFileSchema.isPresent()) {
+      writerSchema = new AvroSchemaConverter().convert(baseFileSchema.get());
       LOG.debug("Writer Schema From Parquet => " + writerSchema.getFields());
     } else {
       writerSchema = schemaFromLogFile;
