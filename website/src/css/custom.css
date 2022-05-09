@@ -200,15 +200,15 @@ footer .container {
 
 .blog-list-page article {
   display: inline-flex;
-  width: 28%;
+  width: 45%;
   margin: 1.2em;
   vertical-align: bottom;
 }
 
-@media only screen and (max-width: 767px) {
+@media only screen and (max-width: 1200px) {
   .blog-list-page article {
     display: flex;
-    width: 100%;
+    width: 80%;
     margin: 1.2em;
   }
 }

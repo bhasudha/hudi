@@ -23,19 +23,52 @@
 
 .tags {
   display: inline;
+  
 }
 
 .tag {
-  margin: 0 0.4rem 0.5rem 0;
+  margin: 0 15px 0.5rem -10px;
   display: inline-block;
 }
 
 .authorTimeTags {
     font-size: 0.7rem;
     color: rgb(28, 30, 33);
+    display:flex;
+    margin-left: 2px
+   
 }
 
 .greyLink {
     color: rgb(28, 30, 33);
     text-decoration-color: rgb(28, 30, 33);
 }
+.authorsList {
+  font-size:0.7rem;
+  white-space: nowrap;
+  
+}
+
+@media(max-width: 1150px){
+  .authorsList{
+    font-size: 0.65rem;
+    
+  }
+  .authorTimeTags{
+    font-size: 0.6rem;
+    white-space: nowrap;
+  }
+}
+
+@media(max-width:995px){
+  .authorsList {
+    font-size:0.7rem;
+    white-space: nowrap;
+    margin-left:-15px
+    
+  }
+}
+
+
+
+
