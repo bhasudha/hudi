@@ -16,6 +16,7 @@ import EditThisPage from '@theme/EditThisPage';
 import styles from './styles.module.css';
 import TagsListInline from '@theme/TagsListInline';
 import BlogPostAuthors from '@theme/BlogPostAuthors'; // Very simple pluralization: probably good enough for now
+import Tag from '@theme/Tag';
 
 function useReadingTimePlural() {
   const {selectMessage} = usePluralForm();
@@ -62,6 +63,101 @@ function BlogPostItem(props) {
   const image = assets.image ?? frontMatter.image ?? '/assets/images/logo-big.png';
   const truncatedPost = !isBlogPostPage && truncated;
   const tagsExists = tags.length > 0;
+  const tagsList = () => {
+      return (
+          <>
+            <ul className={clsx(styles.tags, styles.authorTimeTags, 'padding--none', 'margin-left--sm')}>
+              {tags.map(({label, permalink: tagPermalink}) => (
+                <li key={tagPermalink} className={styles.tag}>
+                  <Tag className={clsx(styles.greyLink)} name={label} permalink={tagPermalink} />
+                </li>
+              ))}
+            </ul>
+          </>
+        );
+  }
+  const AuthorsList = () => {
+        const authorsCount = authors.length;
+        if (authorsCount === 0) {
+            return  (
+                <div className="row margin-top--md margin-bottom--sm">
+                    <time dateTime={date} itemProp="datePublished">
+                        {formattedDate}
+                    </time>
+                </div>
+            )
+        }
+
+        return (
+            <div className={clsx(styles.authorTimeTags, "row margin-top--sm margin-bottom--sm 'margin-vert--md'")}>
+                <time dateTime={date} itemProp="datePublished">
+                    {formattedDate}
+                </time>
+                 {authors.map((author, idx) => (
+                  <div className={clsx('col col--3')} key={idx}>
+                        <div className="avatar margin-bottom--sm">
+                            {author.name && (
+                                    <div>
+                                      <Link href={author.url} itemProp="url">
+                                        <span className={clsx(styles.authorTimeTags)} itemProp="name">{author.name}</span>
+                                      </Link>
+                                    </div>
+                                )
+                            }
+                        </div>
+                    </div>
+                  ))}
+            </div>
+          );
+    }
+  const renderPostTile = () => {
+      const TitleHeading = isBlogPostPage ? 'h1' : 'h2';
+      return (
+        <header>
+         { image && (
+             <div className="col blogThumbnail" itemProp="blogThumbnail">
+               <Link itemProp="url" to={permalink}>
+                 <img
+                  src={withBaseUrl(image, {
+                      absolute: true,
+                  })}
+                 />
+               </Link>
+              </div>
+         )}
+          <TitleHeading className={styles.blogPostTitle} itemProp="headline">
+            {(
+              <Link itemProp="url" to={permalink}>
+                {title}
+              </Link>
+            )}
+          </TitleHeading>
+            {AuthorsList()}
+        {tagsExists ?
+        ( <div
+            className={clsx(styles.blogPostData, styles.authorTimeTags, 'margin-vert--md')}>
+            {tagsList()}
+            {typeof readingTime !== 'undefined' && (
+              <>
+                {' · '}
+                {readingTimePlural(readingTime)}
+              </>
+            )}
+          </div>
+        ) :
+        ( <div
+           className={clsx(styles.blogPostData, styles.authorTimeTags, 'margin-vert--md')}>
+           {typeof readingTime !== 'undefined' && (
+              <>
+                {readingTimePlural(readingTime)}
+              </>
+            )}
+          </div>
+        )
+        }
+        </header>
+      );
+}
 
   const renderPostHeader = () => {
     const TitleHeading = isBlogPostPage ? 'h1' : 'h2';
@@ -98,10 +194,13 @@ function BlogPostItem(props) {
               {readingTimePlural(readingTime)}
             </>
           )}
-        </div>
-        {isBlogPostPage && (
+        {(
             <BlogPostAuthors authors={authors} assets={assets} />
         )}
+        {(
+            <TagsListInline tags={tags} />
+        )}
+        </div>
       </header>
     );
   };
@@ -112,7 +211,7 @@ function BlogPostItem(props) {
       itemProp="blogPost"
       itemScope
       itemType="http://schema.org/BlogPosting">
-      {renderPostHeader()}
+      {isBlogPostPage ? (renderPostHeader()) : (renderPostTile())}
 
 
         {isBlogPostPage && (
@@ -121,7 +220,7 @@ function BlogPostItem(props) {
             </div>
         )}
 
-      {(tagsExists || truncated) && (
+      {(tagsExists || truncated) && (isBlogPostPage) && (
         <footer
           className={clsx('row docusaurus-mt-lg', {
             [styles.blogPostDetailsFull]: isBlogPostPage,

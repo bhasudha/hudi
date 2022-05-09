@@ -20,3 +20,22 @@
 .blog-list-page .container .row {
   width: max-content;
 }
+
+.tags {
+  display: inline;
+}
+
+.tag {
+  margin: 0 0.4rem 0.5rem 0;
+  display: inline-block;
+}
+
+.authorTimeTags {
+    font-size: 0.7rem;
+    color: rgb(28, 30, 33);
+}
+
+.greyLink {
+    color: rgb(28, 30, 33);
+    text-decoration-color: rgb(28, 30, 33);
+}
