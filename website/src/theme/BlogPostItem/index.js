@@ -145,7 +145,7 @@ function BlogPostItem(props) {
             {typeof readingTime !== 'undefined' && (
               <>
                 {' · '}
-                {readingTimePlural(readingTime)}
+                <div className={styles.readingTime}>{readingTimePlural(readingTime)}</div>
               </>
             )}
           </div>
