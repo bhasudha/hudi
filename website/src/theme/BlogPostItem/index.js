@@ -77,6 +77,7 @@ function BlogPostItem(props) {
         );
   }
   const AuthorsList = () => {
+  
         const authorsCount = authors.length;
         if (authorsCount === 0) {
             return  (
@@ -86,6 +87,7 @@ function BlogPostItem(props) {
                     </time>
                 </div>
             )
+           
         }
 
         return (
@@ -94,12 +96,13 @@ function BlogPostItem(props) {
                     {formattedDate}
                 </time>
                  {authors.map((author, idx) => (
+                  
                   <div className={clsx('col col--3')} key={idx}>
                         <div className="avatar margin-bottom--sm">
                             {author.name && (
                                     <div>
                                       <Link href={author.url} itemProp="url">
-                                        <span className={clsx(styles.authorTimeTags)} itemProp="name">{author.name}</span>
+                                        <span className={clsx(styles.authorsList)} itemProp="name">{author.name}</span>
                                       </Link>
                                     </div>
                                 )
@@ -132,7 +135,9 @@ function BlogPostItem(props) {
               </Link>
             )}
           </TitleHeading>
+         
             {AuthorsList()}
+         
         {tagsExists ?
         ( <div
             className={clsx(styles.blogPostData, styles.authorTimeTags, 'margin-vert--md')}>
@@ -140,7 +145,7 @@ function BlogPostItem(props) {
             {typeof readingTime !== 'undefined' && (
               <>
                 {' · '}
-                {readingTimePlural(readingTime)}
+                <div className={styles.readingTime}>{readingTimePlural(readingTime)}</div>
               </>
             )}
           </div>
